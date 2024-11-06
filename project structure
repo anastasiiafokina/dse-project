@@ -1,0 +1,17 @@
+|-- DSE-Project/
+    |-- README.md
+    |-- requirements.txt
+    |-- main.py  # Main execution script
+    |-- data/
+        |-- cities.csv  # City data
+    |-- modules/
+        |-- __init__.py 
+        |-- data_processing.py  # Loading and cleaning data
+        |-- travel_logic.py  # Core travel logic
+        |-- visualization.py  # Route visualization
+        |-- data_import_export.py  # Data import/export functionality
+    |-- output/
+        |-- travel_summary.json  # Output travel summary
+    |-- notebooks/
+        |-- exploration.ipynb  # Exploratory data analysis (optional)
+    |-- app.py  # Optional web app using Streamlit
