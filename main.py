@@ -16,22 +16,46 @@ def haversine(lat1, lon1, lat2, lon2):
     dlat = np.radians(lat2 - lat1)
     dlon = np.radians(lon2 - lon1)
     a = np.sin(dlat / 2)**2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon / 2)**2
-    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a)) #angular distance between two points, expressed in radians
     return R * c  # Distance in kilometers
 
+def calculate_distance_between_cities(city1_name, city2_name, data):
+    """Calculate the distance between two cities by their names."""
+    city1 = data[data['City'] == city1_name].iloc[0]
+    city2 = data[data['City'] == city2_name].iloc[0]
+    
+    # Получение координат городов
+    lat1, lon1 = city1['Latitude'], city1['Longitude']
+    lat2, lon2 = city2['Latitude'], city2['Longitude']
+    
+    # Рассчитываем расстояние с помощью функции haversine
+    distance = haversine(lat1, lon1, lat2, lon2)
+    
+    print(f"Distance between {city1_name} and {city2_name}: {distance:.2f} km")
+    return distance
+
 def find_nearest_cities(data, current_city, num_nearest=3):
-    """Find the nearest cities to the current city, based on latitude and longitude."""
+    """Find the 3 nearest cities to the current city, based on latitude and longitude."""
     distances = []
     for _, city in data.iterrows():
-        if city['city'] != current_city['city']:  # Skip the same city
-            dist = haversine(current_city['latitude'], current_city['longitude'], city['latitude'], city['longitude'])
+        if city['City'] != current_city['City']:  # Skip the same city
+            dist = haversine(current_city['Latitude'], current_city['Longitude'], city['Latitude'], city['Longitude'])
             distances.append((city, dist))
     
+    # Сортировка списка расстояний и выбор ближайших городов
+    distances.sort(key=lambda x: x[1])
+    return distances[:num_nearest]
+    # Вывод ближайших городов и расстояний
+    print(f"Ближайшие {num_nearest} города к {current_city['City']}:")
+    for city, dist in nearest_cities:
+        print(f"{city['City']} на расстоянии {dist:.2f} км")
+        
+
     # Sort by distance and get the top nearest cities
     nearest_cities = sorted(distances, key=lambda x: x[1])[:num_nearest]
     # Add rank to each nearest city (0 for nearest, 1 for second nearest, etc.)
-    return [{'city': city['city'], 'country': city['country'], 'population': city['population'],
-             'latitude': city['latitude'], 'longitude': city['longitude'], 'rank': rank}
+    return [{'City': city['City'], 'Country': city['Country'], 'Population': city['Population'],
+             'Latitude': city['Latitude'], 'Longitude': city['Longitude'], 'Rank': rank}
             for rank, (city, _) in enumerate(nearest_cities)]
     
 #%%
@@ -78,11 +102,36 @@ def save_summary(data, filename):
 def main():
     # Load city data
     data = load_data('data/worldcitiespop.csv')
+    print(data.head()) #first lines output 
+    
+    # Запрос названия города от пользователя
+    city_name = input("Введите название города для поиска ближайших: ").strip()
+    
+    # Проверка на наличие введенного города в данных
+    if city_name in data['City'].values:
+        # Находим текущий город в данных
+        current_city = data[data['City'] == city_name].iloc[0]
+        # Выводим ближайшие города
+        find_nearest_cities(data, current_city)
+    else:
+        print(f"Город '{city_name}' не найден в данных.")
+        
 
     # Initialize journey from London
-    starting_city = data[data['city'] == 'London'].iloc[0]
+    starting_city = data[data['City'] == 'london'].iloc[0]
     journey = [starting_city]
     total_time = 0
+    
+    # Запрос названий городов от пользователя
+    city1 = input("Enter the name of the first city: ").strip()
+    city2 = input("Enter the name of the second city: ").strip()
+    
+    # Проверка на наличие введенных городов в данных
+    if city1 in data['City'].values and city2 in data['City'].values:
+        calculate_distance_between_cities(city1, city2, data)
+    else:
+        print("One or both of the specified cities were not found in the data.")
+
 
     # Simulate journey around the world
     current_city = starting_city
