@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-
 #%%
 # --- Data Loading and Processing Functions ---
 
@@ -24,11 +23,11 @@ def calculate_distance_between_cities(city1_name, city2_name, data):
     city1 = data[data['City'] == city1_name].iloc[0]
     city2 = data[data['City'] == city2_name].iloc[0]
     
-    # Получение координат городов
+    # Getting coordinates of cities
     lat1, lon1 = city1['Latitude'], city1['Longitude']
     lat2, lon2 = city2['Latitude'], city2['Longitude']
     
-    # Рассчитываем расстояние с помощью функции haversine
+    # Calculate the distance using the haversine function
     distance = haversine(lat1, lon1, lat2, lon2)
     
     print(f"Distance between {city1_name} and {city2_name}: {distance:.2f} km")
@@ -42,11 +41,11 @@ def find_nearest_cities(data, current_city, num_nearest=3):
             dist = haversine(current_city['Latitude'], current_city['Longitude'], city['Latitude'], city['Longitude'])
             distances.append((city, dist))
     
-    # Сортировка списка расстояний и выбор ближайших городов
+    # Sorting the list of distances and selecting the nearest cities
     distances.sort(key=lambda x: x[1])
     nearest_cities = distances[:num_nearest]
     
-    # Вывод ближайших городов и расстояний
+    # Display nearest cities and distances
     print(f"Ближайшие {num_nearest} города к {current_city['City']}:")
     for city, dist in nearest_cities:
         print(f"{city['City']} на расстоянии {dist:.2f} км")
@@ -62,20 +61,31 @@ def find_nearest_cities(data, current_city, num_nearest=3):
 #%%
 # --- Travel Logic Functions ---
 
-def calculate_travel_time(city1, city2, population_limit=200000):
-    """Calculate the travel time based on distance rank, country, and population conditions."""
-    base_times = [2, 4, 8]  # Time to first, second, and third nearest cities
-    time = base_times[city2['rank']]
-    
-    # Extra time if crossing borders
-    if city1['Country'] != city2['Country']:
-        time += 2
-    
-    # Extra time if the destination city has a population > 200,000
-    if city2['Population'] > population_limit:
-        time += 2
+def calculate_travel_time(current_city, nearest_cities, population_limit=200000):
+    """
+    Calculate travel times to the 3 nearest cities based on the last selected city.
+    """
+    print(f"\nРасчет времени путешествия из города {current_city['City']}:")
 
-    return time
+    base_times = [2, 4, 8]  # Time to first, second, and third nearest cities
+
+    # Calculate the time to each of the nearest cities
+    for city2_data in nearest_cities:
+        time = base_times[city2_data['Rank']]  # Time based on the rank of the city (0, 1, 2)
+
+        # Extra time if crossing borders
+        if current_city['Country'] != city2_data['Country']:
+            time += 2
+
+        # Extra time if the destination city has a population > 200,000
+        if city2_data['Population'] > population_limit:
+            time += 2
+
+        print(
+            f"- До {city2_data['City']} ({city2_data['Country']}): {time} часов "
+            f"(Население: {city2_data['Population']})."
+        )
+
 
 #%%
 # --- Visualization Functions ---
@@ -88,7 +98,6 @@ def plot_route(route):
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.show()
-    
 #%%
 # --- Data Export Function ---
 
@@ -106,17 +115,20 @@ def main():
     print(data.head()) #first lines output 
     
     while True:
-        # Запрашиваем город у пользователя
+        # Requesting the city from the user
         city_name = input("\nВведите название города для поиска ближайших: ").strip()
         
         if city_name in data['City'].values:
             current_city = data[data['City'] == city_name].iloc[0]
-            find_nearest_cities(data, current_city)
+            nearest_cities = find_nearest_cities(data, current_city)  # Find 3 nearest cities
+            
+            # РWe calculate the time to all 3 nearest cities
+            calculate_travel_time(data, nearest_cities)
         else:
             print(f"Город '{city_name}' не найден в данных.")
             continue
 
-        # Проверка, хочет ли пользователь продолжить
+        # Checking if the user wants to continue
         another_city = input("\nХотите проверить другой город? Введите его название или 'no' для выхода: ").strip().lower()
         
         if another_city == "no":
@@ -125,12 +137,9 @@ def main():
         elif another_city not in data['City'].values:
             print(f"Город '{another_city}' не найден в данных.")
         else:
-            # Переназначаем название города для следующей итерации
+            # Reassigning the city name for the next iteration
             city_name = another_city
-    
-        
-  
-    
+
     #РАСЧЕТ РАССТОЯНИЙ МЕЖДУ 2МЯ ГОРОДАМИ
     # Запрос названий городов от пользователя
     #city1 = input("Enter the name of the first city: ").strip()
@@ -143,26 +152,6 @@ def main():
        # print("One or both of the specified cities were not found in the data.")
        # return
 
-
-    # Simulate journey around the world
-    current_city = starting_city
-    while total_time < 1920:  # 1920 hours = 80 days
-        nearest_cities = find_nearest_cities(data, current_city)
-        next_city = nearest_cities[0]  # Move to the nearest city
-        travel_time = calculate_travel_time(current_city, next_city)
-        total_time += travel_time
-        journey.append(next_city)
-
-        # Update the current city
-        current_city = next_city
-
-        # Check if back in London
-        if current_city['City'].lower() == 'London' and total_time <= 1920:
-            break
-
-    print("Total travel time:", total_time, "hours")
-    plot_route(journey)
-    save_summary({"total_time": total_time, "route": journey}, "output/travel_summary.json")
 
 if __name__ == "__main__":
     main()
