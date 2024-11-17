@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import folium
+
 #%%
 # --- Data Loading and Processing Functions ---
 
@@ -46,9 +48,9 @@ def find_nearest_cities(data, current_city, num_nearest=3):
     nearest_cities = distances[:num_nearest]
     
     # Display nearest cities and distances
-    print(f"Ближайшие {num_nearest} города к {current_city['City']}:")
+    print(f"\nThe nearest {num_nearest} cities to {current_city['City']}:")
     for city, dist in nearest_cities:
-        print(f"{city['City']} на расстоянии {dist:.2f} км")
+        print(f"-{city['City']} is {dist:.2f} km away")
         
 
     # Sort by distance and get the top nearest cities
@@ -65,7 +67,7 @@ def calculate_travel_time(current_city, nearest_cities, population_limit=200000)
     """
     Calculate travel times to the 3 nearest cities based on the last selected city.
     """
-    print(f"\nРасчет времени путешествия из города {current_city['City']}:")
+    print(f"\nCalculation of travel time from {current_city['City']}:")
 
     base_times = [2, 4, 8]  # Time to first, second, and third nearest cities
 
@@ -82,22 +84,47 @@ def calculate_travel_time(current_city, nearest_cities, population_limit=200000)
             time += 2
 
         print(
-            f"- До {city2_data['City']} ({city2_data['Country']}): {time} часов "
-            f"(Население: {city2_data['Population']})."
+            f"- To {city2_data['City']} ({city2_data['Country']}): {time} hours "
+            f"(Population: {city2_data['Population']})."
         )
-
 
 #%%
 # --- Visualization Functions ---
+def plot_route_on_map(route, current_city):
+    """Plot the travel route on an interactive map using folium."""
+    if len(route) < 1:
+        print("There are not enough cities to build a route.")
+        return
 
-def plot_route(route):
-    """Plot the travel route on a 2D map."""
-    lats, lons = zip(*[(city['Latitude'], city['Longitude']) for city in route])
-    plt.plot(lons, lats, marker='o', color='b', linestyle='-')
-    plt.title("World Travel Route")
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
-    plt.show()
+    # Center the map on the current city
+    map_center = [current_city['Latitude'], current_city['Longitude']]
+    travel_map = folium.Map(location=map_center, zoom_start=6)
+
+    # Add the current city to the map
+    folium.Marker(
+        location=[current_city['Latitude'], current_city['Longitude']],
+        popup=current_city['City'],
+        tooltip=current_city['City']
+    ).add_to(travel_map)
+
+    coordinates = []
+
+    # For each nearest city, draw a line from the current city
+    for city in route:
+        coords = [city['Latitude'], city['Longitude']]
+        coordinates.append(coords)
+        folium.Marker(location=coords, popup=city['City'], tooltip=city['City']).add_to(travel_map)
+
+        # Draw the route line between current city and nearest city
+        folium.PolyLine(
+            locations=[[current_city['Latitude'], current_city['Longitude']], [city['Latitude'], city['Longitude']]],
+            color="blue", weight=2.5, opacity=0.7
+        ).add_to(travel_map)
+
+    # Save map as HTML file
+    travel_map.save('travel_route_map.html')
+    print("\nThe route is saved in a file travel_route_map.html. Open this file in a browser.")
+
 #%%
 # --- Data Export Function ---
 
@@ -112,45 +139,48 @@ def save_summary(data, filename):
 def main():
     # Load city data
     data = load_data('data/worldcitiespop.csv')
+    print("The first rows of data:")
     print(data.head()) #first lines output 
+    
     
     while True:
         # Requesting the city from the user
-        city_name = input("\nВведите название города для поиска ближайших: ").strip()
+        city_name = input("\nEnter the name of the city to search for the nearest: ").strip()
         
         if city_name in data['City'].values:
             current_city = data[data['City'] == city_name].iloc[0]
-            nearest_cities = find_nearest_cities(data, current_city)  # Find 3 nearest cities
             
+            nearest_cities = find_nearest_cities(data, current_city)  # Find 3 nearest cities
+
+            # Plot route on the map
+            plot_route_on_map(nearest_cities, current_city)
+
             # РWe calculate the time to all 3 nearest cities
-            calculate_travel_time(data, nearest_cities)
+            calculate_travel_time(current_city, nearest_cities)
         else:
-            print(f"Город '{city_name}' не найден в данных.")
+            print(f"City '{city_name}' not found in the data.")
             continue
-
+ 
         # Checking if the user wants to continue
-        another_city = input("\nХотите проверить другой город? Введите его название или 'no' для выхода: ").strip().lower()
+        user_response = input("\nDo you want to check out another city? (Enter 'yes' or 'no'):").strip().lower()
         
-        if another_city == "no":
-            print("Завершение программы.")
+        if user_response == "no":
+            print("Completion of the program.")
             break
-        elif another_city not in data['City'].values:
-            print(f"Город '{another_city}' не найден в данных.")
+        elif user_response == "yes":
+            continue  # Loop restarts, asking for a new city
         else:
-            # Reassigning the city name for the next iteration
-            city_name = another_city
+            # Keep asking until the user provides a valid answer
+            while user_response not in ["yes", "no"]:
+                print("Please enter 'yes' or 'no'.")
+                user_response = input("Do you want to check out another city? (Enter 'yes' or 'no'): ").strip().lower()
 
-    #РАСЧЕТ РАССТОЯНИЙ МЕЖДУ 2МЯ ГОРОДАМИ
-    # Запрос названий городов от пользователя
-    #city1 = input("Enter the name of the first city: ").strip()
-    #city2 = input("Enter the name of the second city: ").strip()
+            if user_response == "no":
+                print("Completion of the program.")
+                break
+            elif user_response == "yes":
+                continue
     
-    # Проверка на наличие введенных городов в данных
-    #if city1 in data['City'].values and city2 in data['City'].values:
-       # calculate_distance_between_cities(city1, city2, data)
-   # else:
-       # print("One or both of the specified cities were not found in the data.")
-       # return
 
 
 if __name__ == "__main__":
