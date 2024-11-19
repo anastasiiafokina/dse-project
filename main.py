@@ -112,7 +112,7 @@ def can_travel_around_the_world(data, population_limit=200000, latitude_toleranc
 
     if start_city_name not in data['City'].values:
         print(f"City '{start_city_name}' not found in the data.")
-        return False, None, None
+        return False, None, None, None
 
     total_time = 0
     current_city = data[data['City'] == start_city_name].iloc[0]
@@ -122,25 +122,23 @@ def can_travel_around_the_world(data, population_limit=200000, latitude_toleranc
     path = []
     
     # Storing statistics for charts
-    country_times = {}  # Time spent in different countries
+    country_times = []  # Time spent in different countries
     city_coordinates = []  # City coordinates for heat map
     stage_times = {'Travel': 0, 'Border Crossing': 0, 'Stops': 0}  # Time on the stages of the journey
 
     
     print(f"\nStarting the journey from {current_city['City']} in {current_city['Country']}.")
 
-    # Storing statistics for charts
-    country_times = {}  # Time spent in different countries
-    city_coordinates = []  # City coordinates for heat map
-    stage_times = {'Travel': 0, 'Border Crossing': 0, 'Stops': 0}  # Time on the stages of the journey
-
-    city_times = {}  # Track time spent in each city
-
     while True:
         # Mark current city as visited and add it to the path
         visited_cities.add(current_city['City'])
         visited_countries.add(current_city['Country'])
         path.append(current_city['City'])
+        city_coordinates.append((current_city['Latitude'], current_city['Longitude']))
+        
+        # Добавляем время по стране
+        country_times.append((current_city['Country'], total_time))
+        
         
          # Check if we've returned to the starting city (after visiting at least one other city)
         if len(path) > 1 and current_city['City'] == start_city_name:
@@ -186,9 +184,7 @@ def can_travel_around_the_world(data, population_limit=200000, latitude_toleranc
             stage_times['Stops'] += 2
 
         total_time += time 
-        
-        # Update current city
-        current_city = next_city
+        current_city = next_city # Update current city
         
         # Check if we've returned to the starting city
         if current_city['City'] == start_city_name:
@@ -202,10 +198,15 @@ def can_travel_around_the_world(data, population_limit=200000, latitude_toleranc
     # Check if the journey was completed within the time limit
     if total_time <= DAYS_IN_HOURS:
         print("Journey completed within 80 days!")
-        return True, total_time, path, country_times, city_coordinates, stage_times
+        route_times = [time for _ in range(len(path) - 1)]  # Примерные временные интервалы для каждого города
+        graph_data = collect_graph_data(path, route_times, data.drop_duplicates(subset='City').set_index('City').to_dict(orient='index'))
+
+       
+
+        return True, total_time, path
     else:
         print("Journey exceeded 80 days. Not possible to travel around the world within the time limit.")
-        return False, total_time, path, country_times, city_coordinates, stage_times
+        return False, total_time, path
 
 #%%
 # --- Visualization Functions ---
@@ -243,42 +244,63 @@ def plot_route_on_map(route, current_city):
     # Save map as HTML file
     travel_map.save('travel_route_map.html')
     print("\nThe route is saved in a file travel_route_map.html. Open this file in a browser.")
-
+ 
 #%%
-# --- Сompare Сities Functions ---
-def get_user_cities():
+# --- Сбор данных для построения графика ---
+def collect_graph_data(world_route, route_times, cities_data):
     """
-    Запрашиваем у пользователя ввод городов для сравнения.
+    Собирает данные для построения графиков из результата кругосветного путешествия.
     """
-    cities_input = input("Введите города для сравнения, разделенные запятой: ")
-    cities = [city.strip() for city in cities_input.split(',')]  # Разделяем строку по запятой и удаляем лишние пробелы
-    return cities
-
-
-def compare_cities(data, cities_to_compare):
-    """
-    Compare multiple cities based on travel time, number of cities visited, etc.
-    """
-    comparison_results = {}
-    
-    for city in cities_to_compare:
-        # Проверка, существует ли город в данных
-        if city not in data['City'].values:
-            print(f"Город {city} не найден в данных.")
-            continue
-
-        # Пример, как можно рассчитать статистику для каждого города:
-        is_possible, total_time, path, country_times, city_coordinates, stage_times = can_travel_around_the_world(data, city)
+    # Распределение времени по странам
+    country_times = {}
+    for i, city in enumerate(world_route[:-1]):
+        city_key = city.lower()  # Приводим название города к нижнему регистру
         
-        # Сохраняем результаты для каждого города
-        comparison_results[city] = {
-            'Total Time': total_time,
-            'Cities Visited': len(path),
-            'Time by City': stage_times,
+        # Получаем данные для города
+        city_data = cities_data.get(city_key)
+        
+        if city_data is None:
+            print(f"Город {city} не найден в данных!")
+            continue
+        
+        # Пробуем извлечь данные для страны, учитывая возможные различия в ключах
+        country = city_data.get('country', city_data.get('Country', 'Неизвестно'))
+        
+        travel_time = route_times[i]
+        
+        # Добавляем время в страны
+        if country in country_times:
+            country_times[country] += travel_time
+        else:
+            country_times[country] = travel_time
+
+        
+    # Координаты городов для тепловой карты
+    city_coordinates = [
+        {
+            "city": city,
+            "latitude": cities_data[city]['Latitude'],
+            "longitude": cities_data[city]['Longitude']
         }
-    
-    # Now plot comparison (you can use any of the plotting functions for this)
-    return comparison_results
+        for city in world_route
+    ]
+
+    # Время на каждом этапе маршрута
+    stage_times = {
+        f"{world_route[i]} → {world_route[i + 1]}": {
+            "поездка": route_times[i],
+            "граница": cities_data[world_route[i]].get('border_delay', 0),
+            "задержки": cities_data[world_route[i]].get('population_delay', 0)
+        }
+        for i in range(len(world_route) - 1)
+    }
+
+    return {
+        "country_times": country_times,
+        "city_coordinates": city_coordinates,
+        "stage_times": stage_times
+    }
+
 
 
 #%%
@@ -307,46 +329,57 @@ def plot_pie_chart(country_times):
 
 
 
-def plot_heatmap(city_coordinates):
+def plot_heat_map(city_coordinates):
     """
     Построить тепловую карту посещённых городов.
     """
-    latitudes = [coord[0] for coord in city_coordinates]
-    longitudes = [coord[1] for coord in city_coordinates]
+    latitudes = [coord['latitude'] for coord in city_coordinates]
+    longitudes = [coord['longitude'] for coord in city_coordinates]
+    city_names = [coord['city'] for coord in city_coordinates]
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 6))
     plt.hexbin(longitudes, latitudes, gridsize=30, cmap='YlOrRd', mincnt=1)
     plt.colorbar(label='Number of Visits')
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
     plt.title('Heatmap of Visited Cities')
+    
+    # Подписываем города
+    for i, city in enumerate(city_names):
+        plt.text(longitudes[i], latitudes[i], city, fontsize=8, ha='center')
+
     plt.show()
 
 
 
-def plot_stacked_bar_chart(comparison_results):
+def plot_stacked_bar_chart(stage_times):
     """
     Plot a bar chart comparing cities based on total travel time and cities visited.
     """
-    cities = list(comparison_results.keys())
-    total_times = [results['Total Time'] for results in comparison_results.values()]
-    cities_visited = [results['Cities Visited'] for results in comparison_results.values()]
+    stages = list(stage_times.keys())
+    travel_times = [data["поездка"] for data in stage_times.values()]
+    border_delays = [data["граница"] for data in stage_times.values()]
+    other_delays = [data["задержки"] for data in stage_times.values()]
 
-    # Create a bar chart
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bar_width = 0.35
-    index = np.arange(len(cities))
+    # Создаем график
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bar_width = 0.8
+    index = np.arange(len(stages))
 
-    ax.bar(index, total_times, bar_width, label='Total Time')
-    ax.bar(index + bar_width, cities_visited, bar_width, label='Cities Visited')
+    ax.bar(index, travel_times, bar_width, label='Travel Time', color='skyblue')
+    ax.bar(index, border_delays, bar_width, bottom=travel_times, label='Border Delay', color='orange')
+    ax.bar(index, other_delays, bar_width, 
+           bottom=np.array(travel_times) + np.array(border_delays),
+           label='Other Delays', color='gray')
 
-    ax.set_xlabel('City')
-    ax.set_ylabel('Values')
-    ax.set_title('Comparison of Cities')
-    ax.set_xticks(index + bar_width / 2)
-    ax.set_xticklabels(cities)
+    ax.set_xlabel('Stages')
+    ax.set_ylabel('Time (hours)')
+    ax.set_title('Travel Time by Stage')
+    ax.set_xticks(index)
+    ax.set_xticklabels(stages, rotation=45, ha='right')
     ax.legend()
-
+    
+    plt.tight_layout()
     plt.show()
 
     
@@ -366,6 +399,8 @@ def main():
     data = load_data('data/worldcitiespop.csv')
     print("The first rows of data:")
     print(data.head()) #first lines output 
+    
+    country_times, city_coordinates, stage_times = None, None, None
 
     while True: # Requesting the city from the user
         city_name = input("\nEnter the name of the city to search for the nearest: ").strip()
@@ -412,65 +447,48 @@ def main():
             print("Completion of the program.")
             break  # Exit the loop if the user chooses "no"
         elif round_the_world_choice == "yes":
+            
             city_name = input("Enter the name of the starting city for the round-the-world journey: ").strip()
+            
+            if city_name in data['City'].values:
+                journey_possible, total_time, journey_path = can_travel_around_the_world(data, city_name)
 
-            is_possible, min_time, journey_path, country_times, city_coordinates, stage_times = can_travel_around_the_world(data, city_name)
-
-            if is_possible:
-                print(f"\nIt's possible to travel around the world in {min_time / 24:.2f} days.")
-                print(f"Path taken: {' -> '.join(journey_path)}")
+                if journey_possible:
+                    print(f"\nIt's possible to travel around the world in {total_time / 24:.2f} days.")
+                    print(f"Path taken: {' -> '.join(journey_path)}")
+                else:
+                    print("\nIt's not possible to travel around the world within 80 days.")
             else:
-                print("\nIt's not possible to travel around the world within 80 days.")
+                print(f"City '{city_name}' not found in the data.")
+                # Если город найден, выходим из внутреннего цикла
+                break
+            
+            
         else:
             print("Invalid input. Please enter 'yes' or 'no'.")
         # Don't continue asking until the user gives valid input
         continue
-
     
+   
+    user_input = input("\nWould you like to plot visualizations? (Enter 'yes' or 'no'): ").strip().lower()
 
-            
-    is_possible, total_time, path, country_times, city_coordinates, stage_times = can_travel_around_the_world(data)
-    
-    # Распаковываем статистику
-    success, total_time, path, country_times, city_coordinates, stage_times = can_travel_around_the_world(data)
+    if user_input == "yes":
+        # Сбор данных для графиков
+        graph_data = collect_graph_data(world_route, route_times, cities_data)
+        # Пример передачи данных в функцию
+        graph_data = collect_graph_data(path, route_times, data_unique.set_index('City_Country').to_dict(orient='index'))
 
-    # Печатаем результаты для каждого города
-    for city, results in comparison_results.items():
-        print(f"Город: {city}")
-        print(f"  Общее время: {results['Total Time']} часов")
-        print(f"  Посещенные города: {results['Cities Visited']}")
-        print(f"  Время по каждому городу: {results['Time by City']}")
+
+        # Построение графиков
+        plot_pie_chart(graph_data['country_times'])
+        plot_heatmap(graph_data['city_coordinates'])
+        plot_stacked_bar_chart(graph_data['stage_times'])
+        print("Graphs have been generated.")
+    else:
+        print("Skipping visualizations.")
        
 
-
-    # Построение графиков
-    plot_pie_chart(country_times)
-    plot_heatmap(city_coordinates)
-    plot_stacked_bar_chart(stage_times) 
-    """
-    Запрашивает у пользователя, хочет ли он построить графики для сравнения городов.
-    Возвращает True, если пользователь согласен, и False, если нет.
-    """
-    user_input == input("Хотите построить график сравнения городов? (да/нет): ").strip().lower()
-    if  user_input == "yes":
-
-        # Запрашиваем у пользователя города для сравнения
-        cities_to_compare = get_user_cities()
-
-        # Выполняем сравнение
-        comparison_results = compare_cities(data, cities_to_compare)
-        plot_stacked_bar_chart(comparison_results)
-
-        for city, results in comparison_results.items():
-            print(f"\nГород: {city}")
-            print(f"  Общее время: {results['Total Time']} часов")
-            print(f"  Посещенные города: {results['Cities Visited']}")
-            print(f"  Время по каждому городу: {results['Time by City']}")
-    else:
-        print("Графики не будут построены.")
-        
-
-        
+    print("Program completed.")   
 
 if __name__ == "__main__":
     main()
