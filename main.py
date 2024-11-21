@@ -126,18 +126,15 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
     always traveling east, and returning to the starting city. Calculates the full journey
     before checking if it fits within the 80-day limit.
     """
-    
-    
     # Ensure Population is numeric
     data["Population"] = pd.to_numeric(data["Population"], errors="coerce")
 
     DAYS_IN_HOURS = 80 * 24  # Convert 80 days to hours
 
     # Request starting city from the user
-
     if start_city_name not in data["City"].values:
         print(f"City '{start_city_name}' not found in the data.")
-        return False, None, None, None
+        return False, None, None, None, None, None
 
     total_time = 0
     current_city = data[data["City"] == start_city_name].iloc[0]
@@ -145,11 +142,9 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
     visited_cities = set()
     visited_countries = set()
     path = []
-    cities_data = {}
 
     # Storing statistics for charts
-    country_times = []  # Time spent in different countries
-    city_coordinates = []  # City coordinates for heat map
+    country_times = {} # Time spent in different countries
     stage_times = {
         "Travel": 0,
         "Border Crossing": 0,
@@ -160,6 +155,9 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
     print(
         f"\nStarting the journey from {current_city['City']} in {current_city['Country']}."
     )
+    
+    # Add time for the start city (we assume some base time, like 0 hours or the first time interval)
+    country_times[current_city["Country"]] = stage_times["Travel"]
 
     while True:
         # Mark current city as visited and add it to the path
@@ -167,21 +165,11 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         visited_countries.add(current_city["Country"])
         path.append(current_city["City"])
         
-        city_coordinates.append({
-            "city": current_city["City"],
-            "latitude": current_city["Latitude"],
-            "longitude": current_city["Longitude"]
-        })
-        
-        # Add city to the cities_data dictionary
-        cities_data[current_city["City"]] = {
-            "Latitude": current_city["Latitude"],
-            "Longitude": current_city["Longitude"],
-            "Country": current_city["Country"],
-            "Population": current_city["Population"],
-        }
-
-        
+        # Add time spent in the current country to country_times
+        #if current_city["Country"] not in country_times:
+            #country_times[current_city["Country"]] = 0
+        # Add time spent in the country (this is based on the time for this stage)   
+        #country_times[current_city["Country"]] += stage_times["Travel"]
 
         # Check if we've returned to the starting city (after visiting at least one other city)
         if len(path) > 1 and current_city["City"] == start_city_name:
@@ -225,7 +213,14 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         base_times = [2, 4, 8]
         rank = 0  # Always consider the nearest city as the first rank
         time = base_times[rank]
-
+        
+        current_country = current_city["Country"]
+        
+        if current_country in country_times:
+            country_times[current_country] += time
+        else:
+            country_times[current_country] = time
+        
         if current_city["Country"] != next_city["Country"]:
             print(
                 f"Border crossing: {current_city['City']} -> {next_city['City']} ({next_city['Country']})"
@@ -241,11 +236,11 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
             stage_times["Stops"] += 2
 
         total_time += time
+        stage_times["Travel"] += time
         current_city = next_city  # Update current city
         
         # Check if we've returned to the starting city
         if current_city["City"] == start_city_name:
-            
             print(
                 f"Returned to {start_city_name} after visiting {len(visited_cities)} cities."
             )
@@ -261,13 +256,10 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
     # Check if the journey was completed within the time limit
     if total_time <= DAYS_IN_HOURS:
         print("Journey completed within 80 days!")
-        
-        return True, route_times, total_time, path
+        return True, route_times, total_time, path, country_times, stage_times
     else:
-        print(
-            "Journey exceeded 80 days. Not possible to travel around the world within the time limit."
-        )
-        return False, route_times, total_time, path
+        print("Journey exceeded 80 days. Not possible to travel around the world within the time limit.")
+        return False, route_times, total_time, path, country_times, stage_times
 
 
 # %%
@@ -328,7 +320,7 @@ def plot_pie_chart(country_times):
     sizes = list(country_times.values())
 
     # Define colors for the pie chart (you can customize this list as needed)
-    colors = ["#ff9999", "#66b3ff", "#99ff99", "#ffcc99", "#ffb3e6", "#c2c2f0"]
+    colors = ["#ff9999", "#66b3ff", "#ffcc99", "#ffb3e6", "#c2c2f0"]
 
     plt.figure(figsize=(8, 8))
     plt.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=140, colors=colors)
@@ -336,49 +328,31 @@ def plot_pie_chart(country_times):
     plt.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
     plt.show()
 
-
 def plot_stacked_bar_chart(stage_times):
     """
     Plot a bar chart comparing cities based on total travel time and cities visited.
     """
-    stages = list(stage_times.keys())
-    travel_times = [data["поездка"] for data in stage_times.values()]
-    border_delays = [data["граница"] for data in stage_times.values()]
-    other_delays = [data["задержки"] for data in stage_times.values()]
+    travel_times = stage_times["Travel"] 
+    border_delays = stage_times["Border Crossing"] 
+    other_delays = stage_times["Stops"]
 
     # Создаем график
     fig, ax = plt.subplots(figsize=(12, 6))
     bar_width = 0.8
-    index = np.arange(len(stages))
-
-    ax.bar(index, travel_times, bar_width, label="Travel Time", color="skyblue")
-    ax.bar(
-        index,
-        border_delays,
-        bar_width,
-        bottom=travel_times,
-        label="Border Delay",
-        color="orange",
-    )
-    ax.bar(
-        index,
-        other_delays,
-        bar_width,
-        bottom=np.array(travel_times) + np.array(border_delays),
-        label="Other Delays",
-        color="gray",
-    )
+    
+    ax.bar(0, travel_times, bar_width, label="Total Travel Time", color="skyblue")
+    ax.bar(1, border_delays, bar_width, label="Border Delay", color="orange")
+    ax.bar(2, other_delays, bar_width, label="Large City Delay", color="gray")
 
     ax.set_xlabel("Stages")
     ax.set_ylabel("Time (hours)")
     ax.set_title("Travel Time by Stage")
-    ax.set_xticks(index)
-    ax.set_xticklabels(stages, rotation=45, ha="right")
+    ax.set_xticks([0,1,2])
+    ax.set_xticklabels(["Total Travel Time","Border Delay","Large City Delay"], rotation=45, ha="right")
     ax.legend()
 
     plt.tight_layout()
     plt.show()
-
 
 # %%
 # --- Data Export Function ---
@@ -393,14 +367,13 @@ def save_summary(data, filename):
 # %%
 # --- Main Program ---
 
-
 def main():
     # Load city data
     data = load_data("data/worldcitiespop.csv")
     print("The first rows of data:")
     print(data.head())  # first lines output
 
-    country_times, city_coordinates, stage_times = None, None, None
+    country_times, stage_times = None, None
 
     while True:  # Requesting the city from the user
         city_name = input(
@@ -473,16 +446,12 @@ def main():
                 ).strip()
 
                 if city_name in data["City"].values:
-                    journey_possible, route_times, path, total_time = (
+                    journey_possible, route_times, total_time, path, country_times, stage_times = (
                         can_travel_around_the_world(data, city_name)
                     )
 
                     if journey_possible:
                         print(f"Path taken: {' -> '.join(path)}")
-                        #УБРАТЬ ПОТОМ
-                        print(f"route_times before passing: {route_times}")
-
-    
                     else:
                         print("\nIt's not possible to travel around the world within 80 days.")
                     break
@@ -512,7 +481,6 @@ def main():
             print("No stage time data available for visualization.")
 
     print("Program completed.")
-
 
 if __name__ == "__main__":
     main()
