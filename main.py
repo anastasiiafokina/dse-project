@@ -164,12 +164,6 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         visited_cities.add(current_city["City"])
         visited_countries.add(current_city["Country"])
         path.append(current_city["City"])
-        
-        # Add time spent in the current country to country_times
-        #if current_city["Country"] not in country_times:
-            #country_times[current_city["Country"]] = 0
-        # Add time spent in the country (this is based on the time for this stage)   
-        #country_times[current_city["Country"]] += stage_times["Travel"]
 
         # Check if we've returned to the starting city (after visiting at least one other city)
         if len(path) > 1 and current_city["City"] == start_city_name:
@@ -320,8 +314,7 @@ def plot_pie_chart(country_times):
     sizes = list(country_times.values())
 
     # Define colors for the pie chart (you can customize this list as needed)
-    colors = ["#ff9999", "#66b3ff", "#ffcc99", "#ffb3e6", "#c2c2f0"]
-
+    colors = ["#4A6D91", "#D8C7A1", "#B5B8B1", "#A3C4F3", "#F1E1C6"]
     plt.figure(figsize=(8, 8))
     plt.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=140, colors=colors)
     plt.title("Time Spent in Each Country")
@@ -340,9 +333,9 @@ def plot_stacked_bar_chart(stage_times):
     fig, ax = plt.subplots(figsize=(12, 6))
     bar_width = 0.8
     
-    ax.bar(0, travel_times, bar_width, label="Total Travel Time", color="skyblue")
-    ax.bar(1, border_delays, bar_width, label="Border Delay", color="orange")
-    ax.bar(2, other_delays, bar_width, label="Large City Delay", color="gray")
+    ax.bar(0, travel_times, bar_width, label="Total Travel Time", color="#4A6D91")
+    ax.bar(1, border_delays, bar_width, label="Border Delay", color="#D8C7A1")
+    ax.bar(2, other_delays, bar_width, label="Large City Delay", color="#B5B8B1")
 
     ax.set_xlabel("Stages")
     ax.set_ylabel("Time (hours)")
