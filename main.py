@@ -7,11 +7,9 @@ import folium
 # %%
 # --- Data Loading and Processing Functions ---
 
-
 def load_data(filepath):
     """Load the city data from a CSV file."""
     return pd.read_csv(filepath)
-
 
 def haversine(lat1, lon1, lat2, lon2):
     """Calculate the great-circle distance between two points on Earth using the Haversine formula."""
@@ -79,10 +77,8 @@ def find_nearest_cities(data, current_city, num_nearest=3):
         for rank, (city, _) in enumerate(nearest_cities)
     ]
 
-
 # %%
 # --- Travel Logic Functions ---
-
 
 def calculate_travel_time(current_city, nearest_cities, population_limit=200000):
     """
@@ -118,7 +114,6 @@ def calculate_travel_time(current_city, nearest_cities, population_limit=200000)
             f"- To {city2_data['City']} ({city2_data['Country']}): {time} hours "
             f"(Population: {city2_data['Population']})."
         )
-
 
 def can_travel_around_the_world(data, start_city_name, population_limit=200000, latitude_tolerance=0.01):
     """
@@ -216,9 +211,7 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
             country_times[current_country] = time
         
         if current_city["Country"] != next_city["Country"]:
-            print(
-                f"Border crossing: {current_city['City']} -> {next_city['City']} ({next_city['Country']})"
-            )
+            print(f"Border crossing: {current_city['City']} -> {next_city['City']} ({next_city['Country']})")
             time += 2  # Crossing borders adds 2 hours
             stage_times["Border Crossing"] += 2
 
@@ -240,12 +233,8 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
             )
             break
 
-    print(
-        f"\nJourney completed in {total_time:.2f} hours ({total_time / 24:.2f} days)."
-    )
-    print(
-        f"Visited {len(visited_cities)} cities in {len(visited_countries)} countries."
-    )
+    print(f"\nJourney completed in {total_time:.2f} hours ({total_time / 24:.2f} days).")
+    print(f"Visited {len(visited_cities)} cities in {len(visited_countries)} countries.")
 
     # Check if the journey was completed within the time limit
     if total_time <= DAYS_IN_HOURS:
@@ -301,9 +290,7 @@ def plot_route_on_map(route, current_city):
     print(
         "\nThe route is saved in a file travel_route_map.html. Open this file in a browser."
     )
-
-
-
+    
 # %%
 # --- Visualization Functions 2 ---
 def plot_pie_chart(country_times):
@@ -314,7 +301,7 @@ def plot_pie_chart(country_times):
     sizes = list(country_times.values())
 
     # Define colors for the pie chart (you can customize this list as needed)
-    colors = ["#4A6D91", "#D8C7A1", "#B5B8B1", "#A3C4F3", "#F1E1C6"]
+    colors = ["#4A6D91", "#F1E1C6", "#B5B8B1", "#A3C4F3", "#D8C7A1"]
     plt.figure(figsize=(8, 8))
     plt.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=140, colors=colors)
     plt.title("Time Spent in Each Country")
@@ -349,13 +336,10 @@ def plot_stacked_bar_chart(stage_times):
 
 # %%
 # --- Data Export Function ---
-
-
 def save_summary(data, filename):
     """Save travel summary data to a JSON file."""
     with open(filename, "w") as file:
         json.dump(data, file)
-
 
 # %%
 # --- Main Program ---
@@ -406,9 +390,7 @@ def main():
             while user_response not in ["yes", "no"]:
                 print("Please enter 'yes' or 'no'.")
                 user_response = (
-                    input(
-                        "Do you want to check out another city? (Enter 'yes' or 'no'): "
-                    )
+                    input("Do you want to check out another city? (Enter 'yes' or 'no'): ")
                     .strip()
                     .lower()
                 )
@@ -420,11 +402,8 @@ def main():
                 continue
 
     while True:  # Check if the user wants to calculate a round-the-world journey
-
         round_the_world_choice = (
-            input(
-                "\nDo you want to calculate a round-the-world journey? (Enter 'yes' or 'no'): "
-            )
+            input("\nDo you want to calculate a round-the-world journey? (Enter 'yes' or 'no'): ")
             .strip()
             .lower()
         )
