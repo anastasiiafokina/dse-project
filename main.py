@@ -156,10 +156,6 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         "Stops": 0,
     }  # Time on the stages of the journey
     route_times = []
-    
-    # Initialize journey_path before using it
-    journey_path = []  
-
 
     print(
         f"\nStarting the journey from {current_city['City']} in {current_city['Country']}."
@@ -170,6 +166,7 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         visited_cities.add(current_city["City"])
         visited_countries.add(current_city["Country"])
         path.append(current_city["City"])
+        
         city_coordinates.append({
             "city": current_city["City"],
             "latitude": current_city["Latitude"],
@@ -246,9 +243,6 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
         total_time += time
         current_city = next_city  # Update current city
         
-        journey_path.append(current_city["City"])
-        
-        
         # Check if we've returned to the starting city
         if current_city["City"] == start_city_name:
             
@@ -263,24 +257,17 @@ def can_travel_around_the_world(data, start_city_name, population_limit=200000, 
     print(
         f"Visited {len(visited_cities)} cities in {len(visited_countries)} countries."
     )
-    
-    # Определяем путь путешествия
-    journey_path = [start_city_name]  # Начальный город
-    
+
     # Check if the journey was completed within the time limit
     if total_time <= DAYS_IN_HOURS:
         print("Journey completed within 80 days!")
-        graph_data = collect_graph_data(
-            journey_path, path, route_times,
-            data.drop_duplicates(subset="City").set_index("City").to_dict(orient="index"),
-            city_coordinates
-        )
-        return True, route_times, total_time, path, journey_path
+        
+        return True, route_times, total_time, path
     else:
         print(
             "Journey exceeded 80 days. Not possible to travel around the world within the time limit."
         )
-        return False, route_times, total_time, path, journey_path
+        return False, route_times, total_time, path
 
 
 # %%
@@ -329,49 +316,6 @@ def plot_route_on_map(route, current_city):
         "\nThe route is saved in a file travel_route_map.html. Open this file in a browser."
     )
 
-
-# %%
-# --- Сбор данных для построения графика ---
-def collect_graph_data(world_route, route_times, cities_data, path, journey_path):
-    """
-    Собирает данные для построения графиков из результата кругосветного путешествия.
-    """
-    graph_data = {}
-    journey_path = world_route
-    # Распределение времени по странам
-    country_times = {}
-    for i, city in enumerate(world_route[:-1]):
-        city_key = city.lower()  # Приводим название города к нижнему регистру
-
-        # Получаем данные для города
-        city_data = cities_data.get(city_key)
-
-        if city_data is None:
-            print(f"Город {city} не найден в данных!")
-            continue
-
-        # Пробуем извлечь данные для страны, учитывая возможные различия в ключах
-        country = city_data.get("country", city_data.get("Country", "Неизвестно"))
-        
-        for i in range(len(path) - 1):
-            if i < len(route_times):  # Проверяем, что индекс i существует в route_times
-                travel_time = route_times[i]
-                graph_data[path[i]] = {
-                    "next_city": path[i + 1],
-                    "travel_time": travel_time
-                }
-            else:
-                print(f"Warning: Index {i} is out of range for route_times.")
-            return graph_data
-        
-
-        # Добавляем время в страны
-        if country in country_times:
-            country_times[country] += travel_time
-        else:
-            country_times[country] = travel_time
-
-    
 
 
 # %%
@@ -529,22 +473,16 @@ def main():
                 ).strip()
 
                 if city_name in data["City"].values:
-                    journey_possible, journey_path, route_times, path, total_time = (
+                    journey_possible, route_times, path, total_time = (
                         can_travel_around_the_world(data, city_name)
                     )
 
                     if journey_possible:
-                        print(
-                            f"\nIt's possible to travel around the world in {(total_time) / 24:.2f} days."
-                        )
-                        print(f"Path taken: {' -> '.join(journey_path)}")
+                        print(f"Path taken: {' -> '.join(path)}")
+                        #УБРАТЬ ПОТОМ
                         print(f"route_times before passing: {route_times}")
 
-                        graph_data = collect_graph_data(
-                            journey_path,
-                            route_times,
-                            data.drop_duplicates(subset="City").set_index("City").to_dict(orient="index"),
-                        )
+    
                     else:
                         print("\nIt's not possible to travel around the world within 80 days.")
                     break
@@ -561,14 +499,17 @@ def main():
         .lower()
     )
 
-    if user_input == "yes" and graph_data is not None:
+    if user_input == "yes":
 
-        # Построение графиков
-        plot_pie_chart(graph_data["country_times"])
-        plot_stacked_bar_chart(graph_data["stage_times"])
-        print("Graphs have been generated.")
-    else:
-        print("Skipping visualizations.")
+        if country_times:
+            plot_pie_chart(country_times)
+        else:
+            print("No country time data available for visualization.")
+
+        if stage_times:
+            plot_stacked_bar_chart(stage_times)
+        else:
+            print("No stage time data available for visualization.")
 
     print("Program completed.")
 
