@@ -295,7 +295,7 @@ def plot_route_on_map(route, current_city):
 # --- Visualization Functions 2 ---
 def plot_pie_chart(country_times):
     """
-    Построить круговую диаграмму времени, проведённого в каждой стране.
+    Create a pie chart of the time spent in each country.
     """
     labels = list(country_times.keys())
     sizes = list(country_times.values())
@@ -316,7 +316,7 @@ def plot_stacked_bar_chart(stage_times):
     border_delays = stage_times["Border Crossing"] 
     other_delays = stage_times["Stops"]
 
-    # Создаем график
+    # Creating a graph
     fig, ax = plt.subplots(figsize=(12, 6))
     bar_width = 0.8
     
@@ -429,7 +429,7 @@ def main():
                     break
                 else:
                     print(f"City '{city_name}' not found in the data.")
-                # Если город найден, выходим из внутреннего цикла
+                # If the city is found, we exit the inner loop
         else:
             print("Invalid input. Please enter 'yes' or 'no'.")
             # Don't continue asking until the user gives valid input
@@ -441,7 +441,6 @@ def main():
     )
 
     if user_input == "yes":
-
         if country_times:
             plot_pie_chart(country_times)
         else:
