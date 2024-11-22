@@ -335,13 +335,6 @@ def plot_stacked_bar_chart(stage_times):
     plt.show()
 
 # %%
-# --- Data Export Function ---
-def save_summary(data, filename):
-    """Save travel summary data to a JSON file."""
-    with open(filename, "w") as file:
-        json.dump(data, file)
-
-# %%
 # --- Main Program ---
 
 def main():
