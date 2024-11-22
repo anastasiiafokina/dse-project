@@ -11,7 +11,7 @@
     |-- output/
         |-- travel_project.json  # Output travel summary
     |-- notebooks/
-        |-- exploration.ipynb  # Exploratory data analysis (optional)
+        |-- project.ipynb  # Exploratory data analysis (optional)
     |-- app.py  # Optional web app using Streamlit
 |-- Data/
     |-- worldcitiespop.csv  # City data
