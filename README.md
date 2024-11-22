@@ -1,4 +1,3 @@
-# dse-project
 <h1>🌍 Travel Project</h1>
 
 An interactive Python project that helps you visualize travel routes by finding the three nearest cities to your chosen location. The project uses geographical data, calculates travel times, and generates an interactive map for exploration.
