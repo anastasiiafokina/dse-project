@@ -3,7 +3,7 @@
 
 An interactive Python project that helps you visualize travel routes by finding the three nearest cities to your chosen location. The project uses geographical data, calculates travel times, and generates an interactive map for exploration.
 
-<h2>🎯 Features<h2>
+<h2>🎯 Features</h2>
 
 - **Find Nearest Cities**
     Input a city name to get the three geographically nearest cities based on latitude and longitude.
