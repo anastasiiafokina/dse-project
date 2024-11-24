@@ -6,8 +6,6 @@ from streamlit_folium import st_folium
 import matplotlib.pyplot as plt
 
 # --- Functions ---
-# Вставьте сюда все ваши функции, которые вы описали в основном коде.
-# Например:
 def load_data(filepath):
     """Load the city data from a CSV file."""
     return pd.read_csv(filepath)
@@ -244,8 +242,6 @@ def plot_pie_chart(country_times):
     """
     Create a pie chart of the time spent in each country.
     """
-    
-   
     if not country_times:
         st.write("Pie chart data is empty.")
         return None
@@ -260,13 +256,10 @@ def plot_pie_chart(country_times):
     ax.set_title("Time Spent in Each Country")
     return fig
 
-
-
 def plot_stacked_bar_chart(stage_times):
     """
     Plot a bar chart comparing cities based on total travel time and cities visited.
     """
-    
     
     if not stage_times:
         st.write("Stacked bar chart data is empty.")
@@ -295,8 +288,6 @@ def plot_stacked_bar_chart(stage_times):
     ax.legend()
 
     return fig
-
-
 
 
 # --- Streamlit App ---
@@ -330,14 +321,14 @@ if uploaded_file:
             st.write(pd.DataFrame(nearest_cities))
             
             if nearest_cities:
-                # Добавление рангов для ближайших городов
+                # Adding ranks for nearby cities
                 for i, city in enumerate(nearest_cities):
-                    city["Rank"] = i  # 0 для самого ближайшего, 1 для второго и т.д.
+                    city["Rank"] = i  # 0 for the closest, 1 for the second, etc.
 
-                # Расчет времени до ближайших городов
+                # Calculate time to nearest cities
                 calculate_travel_time(current_city, nearest_cities)
 
-                # Отображение времени на странице
+                # Display time on page
                 st.write("#### Travel Times to Nearest Cities:")
                 travel_times = []
                 base_times = [2, 4, 8]
@@ -345,12 +336,12 @@ if uploaded_file:
                     travel_time = base_times[city["Rank"]]
                     extra_time = 0
 
-                    # Дополнительное время за пересечение границ
+                    # Additional time for crossing borders
                     if current_city["Country"] != city["Country"]:
                         travel_time += 2
                         extra_time += 2
 
-                    # Дополнительное время за большое население
+                    # Extra time for large population
                     if city["Population"] > 200000:
                         travel_time += 2
                         extra_time += 2
@@ -363,10 +354,8 @@ if uploaded_file:
                         "Total Time (hours)": travel_time,
                     })
 
-                # Показ результатов в таблице
+                # Show results in table
                 st.write(pd.DataFrame(travel_times))
-
-            
 
             # Plot route on map
             st.write('The map is displayed demonstrating the "path" from the main city to the neighbors.')
@@ -380,7 +369,7 @@ if uploaded_file:
                 result, route_times, total_time, path, country_times, stage_times = can_travel_around_the_world(data, selected_city_name)
 
                 st.write("### Round-the-World Journey Results")
-                if result:  # Теперь result[0] заменён на result
+                if result: 
                     st.success("It's possible to complete a round-the-world journey!")
                 else:
                     st.error("Round-the-world journey is not possible.")
@@ -396,7 +385,7 @@ if uploaded_file:
                 if fig1:
                     st.pyplot(fig1)
                 else:
-                    st.write("Pie chart not available.")  # Вывод сообщения, если график не построился
+                    st.write("Pie chart not available.")  
 
                 # Display the stacked bar chart of time spent at different stages
                 st.write("### Time Spent by Travel Stages")
@@ -404,9 +393,4 @@ if uploaded_file:
                 if fig2:
                     st.pyplot(fig2)
                 else:
-                    st.write("Stacked bar chart not available.")  # Вывод сообщения, если график не построился
-
-
-    
-
-               
+                    st.write("Stacked bar chart not available.")  
