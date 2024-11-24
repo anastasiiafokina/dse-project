@@ -62,8 +62,6 @@ def find_nearest_cities(data, current_city, num_nearest=3):
     for city, dist in nearest_cities:
         print(f"-{city['City']} is {dist:.2f} km away")
 
-    # Sort by distance and get the top nearest cities
-    nearest_cities = sorted(distances, key=lambda x: x[1])[:num_nearest]
     # Add rank to each nearest city (0 for nearest, 1 for second nearest, etc.)
     return [
         {
