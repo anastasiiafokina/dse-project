@@ -4,7 +4,7 @@
     |-- src
         |-- __init__.py 
     |-- main.py  # Main execution script
-    |-- modules
+    |-- modules/
         |-- data_processing.py  # Loading and cleaning data
         |-- travel_logic.py  # Core travel logic
         |-- visualization.py  # Route visualization
